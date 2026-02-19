@@ -1,15 +1,20 @@
-# 使用官方 8.12.0 版本作為基底
 FROM elasticsearch:8.12.0
 
-# 切換到 root 進行插件安裝（確保權限）
+# 切換到 root 以安裝必要工具與插件
 USER root
 
-# 安裝 IK 中文分詞插件
-# --batch 代表自動同意授權，不中斷建構過程
-RUN ./bin/elasticsearch-plugin install --batch https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v8.12.0/elasticsearch-analysis-ik-8.12.0.zip
+# 1. 安裝 curl (用於穩定下載)
+# 2. 手動下載 IK 插件到 /tmp
+# 3. 使用本地檔案進行安裝 (file://)
+# 4. 刪除暫存檔並清理快取
+RUN apt-get update && apt-get install -y curl && \
+    curl -L -o /tmp/ik.zip https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v8.12.0/elasticsearch-analysis-ik-8.12.0.zip && \
+    bin/elasticsearch-plugin install --batch file:///tmp/ik.zip && \
+    rm /tmp/ik.zip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 確保插件目錄的擁有者為 elasticsearch 使用者
+# 確保權限正確
 RUN chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/plugins
 
-# 切換回 elasticsearch 使用者執行服務
+# 切換回 elasticsearch 使用者
 USER elasticsearch
