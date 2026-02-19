@@ -1,20 +1,21 @@
+# 第一階段：專門用來下載的環境 (使用輕量的 alpine)
+FROM alpine:latest AS downloader
+RUN apk add --no-cache wget
+# 下載 IK 插件
+RUN wget https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v8.12.0/elasticsearch-analysis-ik-8.12.0.zip -O /tmp/ik.zip
+
+# 第二階段：最終的 Elasticsearch 鏡像
 FROM elasticsearch:8.12.0
 
-# 切換到 root 以安裝必要工具與插件
+# 切換到 root 以安裝插件
 USER root
 
-# 1. 安裝 curl (用於穩定下載)
-# 2. 手動下載 IK 插件到 /tmp
-# 3. 使用本地檔案進行安裝 (file://)
-# 4. 刪除暫存檔並清理快取
-RUN apt-get update && apt-get install -y curl && \
-    curl -L -o /tmp/ik.zip https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v8.12.0/elasticsearch-analysis-ik-8.12.0.zip && \
-    bin/elasticsearch-plugin install --batch file:///tmp/ik.zip && \
-    rm /tmp/ik.zip && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# 從下載器階段把 ZIP 檔複製過來
+COPY --from=downloader /tmp/ik.zip /tmp/ik.zip
 
-# 確保權限正確
-RUN chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/plugins
+# 執行安裝，完成後刪除暫存檔
+RUN bin/elasticsearch-plugin install --batch file:///tmp/ik.zip && \
+    rm /tmp/ik.zip
 
-# 切換回 elasticsearch 使用者
+# 恢復 elasticsearch 使用者身份
 USER elasticsearch
