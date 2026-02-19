@@ -1,74 +1,107 @@
 apiVersion: zeabur.com/v1
 kind: Template
 metadata:
-  name: search-stack-final
+  name: DB-Search-Migration-Stack
 spec:
+  description: 專為從 MySQL 8.0 搬遷至 MariaDB 11 LTS 與 Elasticsearch 的優化環境
+  icon: https://cdn.zeabur.com/mariadb.svg
+  coverImage: https://zeabur.com/docs/_next/image?url=%2Fdocs%2F_next%2Fstatic%2Fmedia%2Fintro.5b73c4f8.png&w=3840&q=75
+
+  # 全域變數定義
+  variables:
+    - key: MARIADB_PASSWORD
+      type: PASSWORD
+      name: MariaDB Root Password
+      description: 請設定 MariaDB 的管理員密碼
+
+  tags:
+    - Database
+    - Search Engine
+    - Migration
+
+  readme: >-
+    # MySQL to MariaDB + ES 搬遷堆疊
+
+    此模板提供了一個高效能的資料搬遷環境：
+    - **MariaDB 11.4 (LTS)**: 作為穩定儲存核心。
+    - **Elasticsearch 8.12.0**: 預裝 IK 中文分詞插件。
+    - **Redis 7 (Alpine)**: 提供高效能的同步隊列。
+
+  # 模板總資源消耗建議
+  resourceUsage:
+    cpu: 2
+    memory: 4096
+
   services:
-    # 1. MariaDB 11.4 LTS (提供 5 年穩定支援)
+    # --- MariaDB 服務 ---
     - name: mariadb
-      type: KUBERNETES
-      data:
-        kind: Deployment
-        metadata:
-          name: mariadb
-        spec:
-          template:
-            spec:
-              containers:
-                - name: mariadb
-                  image: mariadb:11.4
-                  resources:
-                    limits:
-                      memory: '1Gi' # 萬級資料量給 1G 極度充裕
-                    requests:
-                      memory: '512Mi'
-                  env:
-                    - name: MARIADB_ROOT_PASSWORD
-                      value: '你的密碼'
+      icon: https://cdn.zeabur.com/mariadb.svg
+      template: PREBUILT
+      spec:
+        source:
+          image: mariadb:11.4
+        ports:
+          - id: mysql-port
+            port: 3306
+            type: TCP
+        volumes:
+          - id: db-data
+            dir: /var/lib/mysql
+        resources:
+          cpu: 500
+          memory: 1024
+      env:
+        MARIADB_ROOT_PASSWORD:
+          default: ${MARIADB_PASSWORD}
 
-    # 2. Elasticsearch (自定義鏡像含 IK 插件)
+    # --- Elasticsearch 服務 (GIT 模式以執行 Dockerfile) ---
     - name: elasticsearch
-      type: KUBERNETES
-      source:
-        path: ./elasticsearch
-      data:
-        kind: Deployment
-        metadata:
-          name: elasticsearch
-        spec:
-          template:
-            spec:
-              containers:
-                - name: elasticsearch
-                  env:
-                    - name: discovery.type
-                      value: 'single-node'
-                    - name: xpack.security.enabled
-                      value: 'false'
-                    # 堆疊空間給 1G，剩餘給系統快取處理萬級資料
-                    - name: ES_JAVA_OPTS
-                      value: '-Xms1g -Xmx1g'
-                  resources:
-                    limits:
-                      memory: '2Gi' # 給予 2G 上限，讓搜尋效率最大化
-                    requests:
-                      memory: '1.5Gi'
-                  ports:
-                    - containerPort: 9200
+      icon: https://cdn.worldvectorlogo.com/logos/elasticsearch.svg
+      template: GIT
+      spec:
+        source:
+          rootDirectory: elasticsearch
+        ports:
+          - id: es-http
+            port: 9200
+            type: HTTP
+        volumes:
+          - id: es-data
+            dir: /usr/share/elasticsearch/data
+        resources:
+          cpu: 1000
+          memory: 2048
+      env:
+        discovery.type:
+          default: 'single-node'
+        xpack.security.enabled:
+          default: 'false'
+        ES_JAVA_OPTS:
+          default: '-Xms1g -Xmx1g'
 
-    # 3. Redis (純 Queue 角色)
+    # --- Redis 服務 ---
     - name: redis
-      type: KUBERNETES
-      data:
-        kind: Deployment
-        metadata:
-          name: redis
-        spec:
-          template:
-            spec:
-              containers:
-                - name: redis
-                  image: redis:7-alpine
-                  resources:
-                    limits:
-                      memory: '128Mi'
+      icon: https://service-icons.zeabur.com/marketplace/redis.svg
+      template: PREBUILT
+      spec:
+        source:
+          image: redis:7-alpine
+        ports:
+          - id: redis-port
+            port: 6379
+            type: TCP
+        volumes:
+          - id: redis-data
+            dir: /data
+        resources:
+          cpu: 200
+          memory: 256
+
+# 多語言對照區
+localization:
+  zh-TW:
+    description: 針對 MySQL 8.0 搬遷至 MariaDB 11 LTS 與 ES (IK) 的高效能堆疊。
+    variables:
+      - key: MARIADB_PASSWORD
+        name: 資料庫管理密碼
+        description: 設定 MariaDB 的 root 密碼。
