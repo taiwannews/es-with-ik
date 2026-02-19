@@ -8,7 +8,7 @@ spec:
   coverImage: https://zeabur.com/docs/_next/image?url=%2Fdocs%2F_next%2Fstatic%2Fmedia%2Fintro.5b73c4f8.png&w=3840&q=75
 
   variables:
-    - key: MARIADB_PASSWORD
+    - key: MARIADB_ROOT_PASSWORD
       type: PASSWORD
       name: MariaDB Root Password
       description: 請設定 MariaDB 的管理員密碼
@@ -40,9 +40,8 @@ spec:
         resources:
           cpu: 500
           memory: 1024
-      env:
-        MARIADB_ROOT_PASSWORD:
-          default: ${MARIADB_PASSWORD}
+      # env 不需要手動設定 MARIADB_ROOT_PASSWORD
+      # Zeabur 會自動將 variables 中定義的 key 注入為環境變數
 
     # --- 2. Elasticsearch ---
     - name: elasticsearch
