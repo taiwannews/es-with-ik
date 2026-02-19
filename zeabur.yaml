@@ -47,11 +47,10 @@ spec:
     # --- 2. Elasticsearch ---
     - name: elasticsearch
       icon: https://cdn.worldvectorlogo.com/logos/elasticsearch.svg
-      template: GIT
+      template: PREBUILT
       spec:
         source:
-          git:
-            rootDirectory: elasticsearch # 指向含有 Dockerfile 的資料夾
+          image: ghcr.io/taiwannews/es-with-ik:latest
         ports:
           - id: es-http
             port: 9200
