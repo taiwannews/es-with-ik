@@ -1,0 +1,34 @@
+name: Build and Push ES Image
+
+on:
+  push:
+    branches: ['main'] # 當你推送到 main 時觸發
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-es
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./elasticsearch # 這裡指向你的 elasticsearch 目錄
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/es-with-ik:latest
