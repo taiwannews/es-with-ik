@@ -1,0 +1,74 @@
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: search-stack-final
+spec:
+  services:
+    # 1. MariaDB 11.4 LTS (提供 5 年穩定支援)
+    - name: mariadb
+      type: KUBERNETES
+      data:
+        kind: Deployment
+        metadata:
+          name: mariadb
+        spec:
+          template:
+            spec:
+              containers:
+                - name: mariadb
+                  image: mariadb:11.4
+                  resources:
+                    limits:
+                      memory: '1Gi' # 萬級資料量給 1G 極度充裕
+                    requests:
+                      memory: '512Mi'
+                  env:
+                    - name: MARIADB_ROOT_PASSWORD
+                      value: '你的密碼'
+
+    # 2. Elasticsearch (自定義鏡像含 IK 插件)
+    - name: elasticsearch
+      type: KUBERNETES
+      source:
+        path: ./elasticsearch
+      data:
+        kind: Deployment
+        metadata:
+          name: elasticsearch
+        spec:
+          template:
+            spec:
+              containers:
+                - name: elasticsearch
+                  env:
+                    - name: discovery.type
+                      value: 'single-node'
+                    - name: xpack.security.enabled
+                      value: 'false'
+                    # 堆疊空間給 1G，剩餘給系統快取處理萬級資料
+                    - name: ES_JAVA_OPTS
+                      value: '-Xms1g -Xmx1g'
+                  resources:
+                    limits:
+                      memory: '2Gi' # 給予 2G 上限，讓搜尋效率最大化
+                    requests:
+                      memory: '1.5Gi'
+                  ports:
+                    - containerPort: 9200
+
+    # 3. Redis (純 Queue 角色)
+    - name: redis
+      type: KUBERNETES
+      data:
+        kind: Deployment
+        metadata:
+          name: redis
+        spec:
+          template:
+            spec:
+              containers:
+                - name: redis
+                  image: redis:7-alpine
+                  resources:
+                    limits:
+                      memory: '128Mi'
