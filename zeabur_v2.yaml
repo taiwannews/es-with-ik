@@ -1,0 +1,37 @@
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: ES-Stack
+spec:
+  description: Elasticsearch (含 IK) 的單服務環境
+  icon: https://cdn.worldvectorlogo.com/logos/elasticsearch.svg
+  coverImage: https://zeabur.com/docs/_next/image?url=%2Fdocs%2F_next%2Fstatic%2Fmedia%2Fintro.5b73c4f8.png&w=3840&q=75
+
+  tags:
+    - Search Engine
+
+  services:
+    - name: elasticsearch
+      icon: https://cdn.worldvectorlogo.com/logos/elasticsearch.svg
+      template: PREBUILT
+      spec:
+        source:
+          image: ghcr.io/taiwannews/es-with-ik:latest
+        ports:
+          - id: es-http
+            port: 9200
+            type: HTTP
+        volumes:
+          - id: es-data
+            dir: /usr/share/elasticsearch/data
+        env:
+          discovery.type:
+            default: 'single-node'
+          xpack.security.enabled:
+            default: 'false'
+          ES_JAVA_OPTS:
+            default: '-Xms1g -Xmx1g'
+
+localization:
+  zh-TW:
+    description: 單一 Elasticsearch（含 IK）服務模板。

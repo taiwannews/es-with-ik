@@ -11,5 +11,12 @@ RUN bin/elasticsearch-plugin install --batch \
 # 將插件目錄的所有權還給 elasticsearch 使用者 (UID 1000)
 RUN chown -R 1000:0 /usr/share/elasticsearch/plugins
 
+# 加入自訂 entrypoint，確保平台以 root 啟動時也能降權並走官方初始化流程
+COPY docker-entrypoint-custom.sh /usr/local/bin/docker-entrypoint-custom.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint-custom.sh
+
+# 設定 entrypoint：若以 root 啟動，先降權再交給官方 entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-custom.sh"]
+
 # 預設以 elasticsearch 使用者執行（正常情況）
 USER 1000
